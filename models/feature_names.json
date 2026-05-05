@@ -1,0 +1,16 @@
+{
+  "feature_names": [
+    "HighBP",
+    "HighChol",
+    "BMI",
+    "Stroke",
+    "HeartDiseaseorAttack",
+    "PhysActivity",
+    "HvyAlcoholConsump",
+    "GenHlth",
+    "MentHlth",
+    "PhysHlth",
+    "DiffWalk",
+    "Age"
+  ]
+}

@@ -1,0 +1,98 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(88, 166, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 85% 15%, rgba(63, 185, 80, 0.12), transparent 28%),
+    linear-gradient(180deg, #05070b 0%, #0b1020 52%, #05070b 100%);
+  color: #e6edf3;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(88, 166, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+}
+
+.app-shell::before,
+.app-shell::after {
+  content: "";
+  position: fixed;
+  inset: auto;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(20px);
+  opacity: 0.7;
+}
+
+.app-shell::before {
+  width: 22rem;
+  height: 22rem;
+  top: -8rem;
+  left: -6rem;
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.app-shell::after {
+  width: 18rem;
+  height: 18rem;
+  right: -5rem;
+  bottom: 8rem;
+  background: rgba(191, 132, 255, 0.10);
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding-bottom: 42px !important;
+  }
+
+  .app-shell > div:first-child {
+    padding-inline: 14px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    font-size: 14px;
+  }
+
+  .app-shell > div:first-child {
+    height: auto !important;
+    min-height: 54px;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+}

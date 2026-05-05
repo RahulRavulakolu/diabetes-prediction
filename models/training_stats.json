@@ -1,0 +1,74 @@
+{
+  "HighBP": {
+    "mean": 0.429064,
+    "std": 0.494942,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "HighChol": {
+    "mean": 0.424615,
+    "std": 0.494284,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "BMI": {
+    "mean": 28.398322,
+    "std": 6.629903,
+    "min": 12.0,
+    "max": 98.0
+  },
+  "Stroke": {
+    "mean": 0.040214,
+    "std": 0.196461,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "HeartDiseaseorAttack": {
+    "mean": 0.094163,
+    "std": 0.292055,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "PhysActivity": {
+    "mean": 0.75643,
+    "std": 0.429236,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "HvyAlcoholConsump": {
+    "mean": 0.055689,
+    "std": 0.22932,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "GenHlth": {
+    "mean": 2.509278,
+    "std": 1.067135,
+    "min": 1.0,
+    "max": 5.0
+  },
+  "MentHlth": {
+    "mean": 3.170092,
+    "std": 7.393184,
+    "min": 0.0,
+    "max": 30.0
+  },
+  "PhysHlth": {
+    "mean": 4.226625,
+    "std": 8.71214,
+    "min": 0.0,
+    "max": 30.0
+  },
+  "DiffWalk": {
+    "mean": 0.167901,
+    "std": 0.373778,
+    "min": 0.0,
+    "max": 1.0
+  },
+  "Age": {
+    "mean": 8.040929,
+    "std": 3.054256,
+    "min": 1.0,
+    "max": 13.0
+  }
+}

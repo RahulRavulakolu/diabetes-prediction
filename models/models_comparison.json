@@ -1,0 +1,82 @@
+{
+  "LogisticRegression": {
+    "test": {
+      "accuracy": 0.7287,
+      "precision": 0.8444,
+      "recall": 0.7287,
+      "f1": 0.7626,
+      "roc_auc": 0.8137
+    },
+    "validation": {
+      "accuracy": 0.7264,
+      "precision": 0.8429,
+      "recall": 0.7264,
+      "f1": 0.7607,
+      "roc_auc": 0.811
+    }
+  },
+  "DecisionTree": {
+    "test": {
+      "accuracy": 0.794,
+      "precision": 0.8279,
+      "recall": 0.794,
+      "f1": 0.8075,
+      "roc_auc": 0.8034
+    },
+    "validation": {
+      "accuracy": 0.792,
+      "precision": 0.8262,
+      "recall": 0.792,
+      "f1": 0.8057,
+      "roc_auc": 0.802
+    }
+  },
+  "RandomForest": {
+    "test": {
+      "accuracy": 0.8101,
+      "precision": 0.8321,
+      "recall": 0.8101,
+      "f1": 0.8194,
+      "roc_auc": 0.8125
+    },
+    "validation": {
+      "accuracy": 0.8061,
+      "precision": 0.8278,
+      "recall": 0.8061,
+      "f1": 0.8153,
+      "roc_auc": 0.8092
+    }
+  },
+  "GradientBoosting": {
+    "test": {
+      "accuracy": 0.8428,
+      "precision": 0.8203,
+      "recall": 0.8428,
+      "f1": 0.8272,
+      "roc_auc": 0.811
+    },
+    "validation": {
+      "accuracy": 0.8436,
+      "precision": 0.8202,
+      "recall": 0.8436,
+      "f1": 0.8269,
+      "roc_auc": 0.8091
+    }
+  },
+  "SVM": {
+    "test": {
+      "accuracy": 0.7835,
+      "precision": 0.8325,
+      "recall": 0.7835,
+      "f1": 0.8017,
+      "roc_auc": 0.7883
+    },
+    "validation": {
+      "accuracy": 0.7829,
+      "precision": 0.8321,
+      "recall": 0.7829,
+      "f1": 0.8011,
+      "roc_auc": 0.7864
+    }
+  }
+}

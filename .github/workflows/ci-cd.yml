@@ -1,0 +1,195 @@
+name: Diabetes MLOps CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "data/*.csv"
+      - "ml/**"
+      - "api/**"
+      - "tests/**"
+      - "requirements.txt"
+      - "Dockerfile"
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY:   ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/diabetes-mlops-api
+
+jobs:
+
+  # ── 01. Checkout & setup ──────────────────────────────────────────────────────
+  setup:
+    name: Checkout
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+  # ── 02. Install & lint ────────────────────────────────────────────────────────
+  lint:
+    name: Install & Lint
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+      - name: Install
+        run: pip install -r requirements.txt ruff mypy
+      - name: Ruff lint
+        run: ruff check ml/ api/
+      - name: Type-check API
+        run: mypy api/main.py --ignore-missing-imports
+
+  # ── 03. Tests (coverage gate ≥80 %) ──────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+      - name: Install
+        run: pip install -r requirements.txt pytest-cov
+      - name: Run tests with coverage gate
+        run: pytest tests/ -v --tb=short --cov=. --cov-fail-under=80
+        env:
+          MODEL_DIR: models
+
+  # ── 04. Train — all 5 models ──────────────────────────────────────────────────
+  train:
+    name: Train
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Preprocess + SMOTE + feature selection + train
+        run: python ml/train.py
+        env:
+          DATA_PATH:            data/diabetes_012_health_indicators_BRFSS2015.csv
+          MODEL_DIR:            models
+          MLFLOW_TRACKING_URI:  mlruns
+      - name: Upload training artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model-${{ github.sha }}
+          path: |
+            models/best_model_v2.pkl
+            models/feature_names.json
+            models/model_summary.json
+          retention-days: 30
+
+  # ── 05. Evaluate — select best F1, register to MLflow ─────────────────────────
+  evaluate:
+    name: Evaluate
+    runs-on: ubuntu-latest
+    needs: train
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model-${{ github.sha }}
+          path: models/
+      - name: Verify best model
+        run: |
+          python - <<'EOF'
+          import json, pathlib
+          summary = json.loads(pathlib.Path("models/model_summary.json").read_text())
+          best = summary.get("best_model", "unknown")
+          f1   = summary.get(best, {}).get("f1", 0)
+          print(f"Best model: {best}  F1={f1}")
+          assert f1 > 0.5, f"F1={f1} below minimum threshold 0.5"
+          EOF
+
+  # ── 06. Build Docker image ────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: evaluate
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model-${{ github.sha }}
+          path: models/
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Build and push multi-stage image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: api
+          push: true
+          tags:       ${{ steps.meta.outputs.tags }}
+          labels:     ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+  # ── 07. Deploy — auto-redeploy, zero downtime ─────────────────────────────────
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Trigger deployment
+        run: |
+          echo "🚀 Deployment step — wire in your platform here."
+          echo "  Render:  curl -X POST \$RENDER_DEPLOY_HOOK"
+          echo "  Railway: railway CLI"
+          echo "  AWS ECS: aws ecs update-service"
+        # Example for Render:
+        # run: curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"

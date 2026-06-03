@@ -1,30 +1,21 @@
-# ─── Stage 1: Train ────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS trainer
+# ─── Single Stage: API with pre-trained models ────────────────────────────────
+# Models are already trained and committed to the repo.
+# No training stage needed — just copy and serve.
+FROM python:3.11-slim
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY data/       ./data/
-COPY ml/         ./ml/
-COPY models/     ./models/
+# Copy API source
+COPY api/       ./api/
 
-# Train to produce best_model_v2.pkl (SMOTE + SelectKBest + 5 models)
-RUN python ml/train.py || true
+# Copy pre-trained model artifacts directly from repo
+COPY models/    ./models/
 
-
-# ─── Stage 2: API ─────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS api
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy API source and trained artifacts
-COPY api/          ./api/
-COPY --from=trainer /app/models/ ./models/
+# Copy database directory if exists
+COPY database/  ./database/
 
 ENV MODEL_DIR=models
 ENV PYTHONPATH=/app

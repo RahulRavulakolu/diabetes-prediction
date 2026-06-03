@@ -1,0 +1,6 @@
+INFO:     Started server process [15968]
+INFO:     Waiting for application startup.
+INFO:api.main:Model loaded from models\best_model_v2.pkl
+INFO:api.main:Heart model loaded from models\heart_model.pkl
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)

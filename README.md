@@ -58,6 +58,11 @@ The backend surface in [api/main.py](api/main.py) exposes:
 - `GET /health`
 - `GET /model-info`
 - `POST /predict`
+- `POST /predict-heart`
+- `POST /predict-symptoms`
+- `POST /alert-config`
+- `GET /alerts`
+- `POST /chat`
 
 ## 05 — MLOps Stack
 
@@ -73,17 +78,19 @@ The key runtime environment variables are:
 - `MODEL_DIR`
 - `MLFLOW_TRACKING_URI`
 - `VITE_API_URL`
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL`
 
 ## 06 — Frontend Output
 
-The current React app in [frontend/src/App.jsx](frontend/src/App.jsx) presents a compact assessment UI rather than a broad dashboard. It focuses on:
+The current React app in [frontend/src/App.tsx](frontend/src/App.tsx) ships the HealthGuard clinical dashboard UI. It focuses on:
 
-- entering the most relevant health indicators
-- submitting them to the API
-- showing the prediction state
-- displaying the returned risk label and probability
+- interactive diabetes and cardiac risk panels
+- AI-assisted explanations and triage narratives
+- clinical-style data summaries and MLOps drift views
+- optional Gemini-backed medical assistant responses
 
-This keeps the frontend lightweight while leaving the actual inference logic in the backend.
+The AI helper endpoints are served from the frontend Express server and can run in fallback mode when no Gemini key is configured.
 
 ## 07 — Tech Stack
 
@@ -132,6 +139,12 @@ pip install -r requirements.txt
 python ml/train.py
 ```
 
+### Train the heart disease model
+
+```bash
+python ml/train_heart.py
+```
+
 ### Start the API
 
 ```bash
@@ -143,8 +156,14 @@ uvicorn api.main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
+Copy-Item .env.example .env
+# edit .env and set GEMINI_API_KEY
 npm run dev
 ```
+
+Update `.env` with the FastAPI URL using `VITE_API_URL` (defaults to `http://localhost:8000`).
+
+For the chatbot endpoint, set `OPENROUTER_API_KEY` in your backend environment. If it is missing, the `/chat` route will return 401.
 
 ### Start MLflow
 
@@ -185,6 +204,24 @@ Risk levels are mapped as:
 - Moderate: 25% to below 50%
 - High: 50% to below 75%
 - Very High: 75% and above
+
+### `POST /predict-heart`
+
+Uses the heart disease model trained by `ml/train_heart.py` and returns the same
+response schema as `/predict` with a heart-focused label.
+
+### `POST /predict-symptoms`
+
+Maps a symptom list to a derived clinical input vector and runs the diabetes model.
+Returns derived inputs alongside prediction outputs.
+
+### `POST /alert-config` and `GET /alerts`
+
+Stores a per-user alert threshold and returns in-app alert history.
+
+### `POST /chat`
+
+Uses OpenRouter (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`) to return short health guidance.
 
 ## Testing
 

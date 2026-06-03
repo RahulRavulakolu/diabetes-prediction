@@ -16,6 +16,8 @@ services:
     environment:
       MODEL_DIR: models
       MLFLOW_TRACKING_URI: mlruns
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -50,12 +52,13 @@ services:
     image: node:20-alpine
     container_name: diabetes_frontend
     working_dir: /app
-    command: sh -c "npm install && npm run build && npx serve dist -p 3000"
+    command: sh -c "npm install && npm run build && npm run start"
     ports:
       - "3000:3000"
     volumes:
       - ./frontend:/app
     environment:
+      NODE_ENV: production
       VITE_API_URL: http://localhost:8000
     depends_on:
       - api

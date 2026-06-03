@@ -1,0 +1,8 @@
+{
+  "name": "HealthGuard AI",
+  "description": "Explainable Multi-Disease Prediction and Analytics System. Underpinned by clinical biometrics, real-time SHAP explanation coefficients, and predictive MLOps tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

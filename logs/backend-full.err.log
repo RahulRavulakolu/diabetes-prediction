@@ -1,0 +1,8 @@
+INFO:     Started server process [26768]
+INFO:     Waiting for application startup.
+INFO:api.main:Model loaded from models\best_model_v2.pkl
+INFO:api.main:Heart model loaded from models\heart_model.pkl
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8001): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.

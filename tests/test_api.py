@@ -108,3 +108,41 @@ def test_confidence_equals_probability(client):
     if r.status_code == 200:
         data = r.json()
         assert abs(data["confidence"] - round(data["probability_yes"] * 100, 1)) < 0.01
+
+
+def test_predict_heart(client):
+    payload = {
+        "gender": 1,
+        "age_years": 54.0,
+        "bmi": 27.0,
+        "ap_hi": 130,
+        "ap_lo": 85,
+        "cholesterol": 2,
+        "gluc": 1,
+        "smoke": 0,
+        "alco": 0,
+        "active": 1,
+    }
+    r = client.post("/predict-heart", json=payload)
+    assert r.status_code in (200, 503)
+
+
+def test_predict_symptoms(client):
+    payload = {
+        "symptoms": ["fatigue", "frequent_urination"],
+        "severity": 3,
+        "age": 7,
+        "bmi": 29.0,
+    }
+    r = client.post("/predict-symptoms", json=payload)
+    assert r.status_code in (200, 503)
+
+
+def test_alert_config(client):
+    r = client.post("/alert-config", json={"user_id": "test", "threshold": 0.8, "channel": "in_app"})
+    assert r.status_code == 200
+
+
+def test_chat_endpoint(client):
+    r = client.post("/chat", json={"message": "Hello", "context": {"risk_level": "Low"}})
+    assert r.status_code in (200, 401, 403, 502, 500)

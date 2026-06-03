@@ -1,0 +1,1025 @@
+================================================================================
+              DIABETES RISK AI — MLOps PROJECT REPORT
+                    (DiabetesRisk AI / HealthGuard AI)
+================================================================================
+
+                       Comprehensive Project Documentation
+                       Date: May 2026
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+  1.  PROJECT OVERVIEW
+  2.  PROBLEM STATEMENT
+  3.  PROJECT OBJECTIVES
+  4.  DATASETS USED
+  5.  DATA PREPROCESSING & FEATURE ENGINEERING
+  6.  MACHINE LEARNING MODELS USED
+  7.  MODEL EVALUATION & ACCURACY
+  8.  BEST MODEL SELECTION
+  9.  EXPLAINABILITY (SHAP)
+  10. LLMs & AI INTEGRATIONS
+  11. SYSTEM ARCHITECTURE
+  12. TECH STACK
+  13. BACKEND API (FastAPI)
+  14. FRONTEND (React + Vite)
+  15. DATABASE
+  16. USER AUTHENTICATION
+  17. MLOps PIPELINE
+  18. CI/CD (GitHub Actions)
+  19. DOCKER CONTAINERISATION
+  20. DATA DRIFT DETECTION
+  21. ALERT SYSTEM
+  22. TESTING
+  23. KEY FEATURES SUMMARY
+  24. PROJECT OUTCOMES
+  25. PROJECT DIRECTORY STRUCTURE
+  26. HOW TO RUN THE PROJECT
+  27. DISCLAIMER
+
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+DiabetesRisk AI (also branded as "HealthGuard AI") is an end-to-end
+machine-learning-powered health risk prediction platform built with a full
+MLOps workflow. The project predicts the risk of Type-2 diabetes and
+cardiovascular (heart) disease using clinical health indicators. It combines
+classical ML classification models, real-time SHAP explainability, LLM-powered
+medical assistants (Google Gemini and OpenRouter/GPT-4o-mini), a React-based
+clinical dashboard, FastAPI backend, MLflow experiment tracking, Docker-based
+deployment, and GitHub Actions CI/CD automation.
+
+The platform is designed for educational, research, and demonstration purposes
+to showcase how modern MLOps practices can be applied to healthcare prediction.
+
+
+================================================================================
+2. PROBLEM STATEMENT
+================================================================================
+
+Diabetes and cardiovascular disease are among the leading causes of death and
+disability worldwide. Early identification of at-risk individuals can
+dramatically improve health outcomes through timely intervention. However:
+
+  - Traditional screening processes are slow, expensive, and not scalable.
+  - Machine learning models are often "black boxes" that clinicians cannot trust.
+  - Most ML projects stop at the training stage and never reach production.
+  - Model performance degrades over time as population data drifts.
+
+This project addresses ALL of these challenges by building a complete system
+that:
+
+  1. Predicts diabetes and heart disease risk from easily obtainable health
+     indicators (no blood tests required for basic screening).
+  2. Explains every prediction using SHAP values so clinicians can understand
+     WHY a patient is flagged as high-risk.
+  3. Provides a production-ready deployment with Docker, CI/CD, and monitoring.
+  4. Detects data drift and supports automated model retraining.
+  5. Integrates LLMs for AI-powered health guidance and symptom triage.
+
+
+================================================================================
+3. PROJECT OBJECTIVES
+================================================================================
+
+  - Build a multi-model ML pipeline that trains, evaluates, and selects the
+    best classifier for diabetes and heart disease prediction.
+  - Provide transparent, explainable AI using SHAP (Shapley Additive
+    Explanations) for every prediction.
+  - Create an interactive, clinical-grade web dashboard for health professionals
+    and users to input health parameters and receive risk assessments.
+  - Implement full MLOps: experiment tracking (MLflow), containerisation
+    (Docker), CI/CD (GitHub Actions), and data drift detection.
+  - Integrate LLMs (Google Gemini 3.5 Flash and OpenRouter GPT-4o-mini) for
+    AI-powered clinical narratives, symptom analysis, and chatbot assistance.
+  - Store prediction history in a database for longitudinal patient tracking.
+  - Support user authentication (email/password and Google OAuth via Firebase).
+
+
+================================================================================
+4. DATASETS USED
+================================================================================
+
+4.1 DIABETES DATASET
+---------------------
+  Name:        BRFSS 2015 (Behavioral Risk Factor Surveillance System)
+  File:        data/diabetes_012_health_indicators_BRFSS2015.csv
+  Source:      CDC / Kaggle
+  Rows:        253,680
+  Columns:     22 (21 health indicators + 1 target)
+  Target:      Diabetes_012 (0 = No Diabetes, 1 = Pre-diabetes, 2 = Diabetes)
+               → Binarised to: 0 = No Diabetes, 1 = Diabetes/Pre-diabetes
+  File Size:   ~22 MB
+
+  Features (21 health indicators):
+  - HighBP, HighChol, CholCheck, BMI, Smoker, Stroke,
+    HeartDiseaseorAttack, PhysActivity, Fruits, Veggies,
+    HvyAlcoholConsump, AnyHealthcare, NoDocbcCost, GenHlth,
+    MentHlth, PhysHlth, DiffWalk, Sex, Age, Education, Income
+
+  Note: The "Income" feature is DROPPED during training to avoid
+  socioeconomic bias in predictions.
+
+4.2 HEART DISEASE DATASET
+--------------------------
+  Name:        Cardiovascular Disease Dataset (cardio_train.csv)
+  File:        data/cardio_train.csv
+  Source:      Kaggle
+  Rows:        ~70,000
+  Format:      Semicolon-separated (;)
+  Target:      cardio (0 = No Heart Disease, 1 = Heart Disease)
+  File Size:   ~2.9 MB
+
+  Original Features:
+  - id, age (in days), gender, height, weight, ap_hi (systolic BP),
+    ap_lo (diastolic BP), cholesterol, gluc, smoke, alco, active, cardio
+
+  Engineered Features:
+  - age_years = age / 365.25 (converted from days to years)
+  - bmi = weight / (height/100)^2 (computed Body Mass Index)
+  - gender = gender - 1 (converted to 0/1 encoding)
+
+
+================================================================================
+5. DATA PREPROCESSING & FEATURE ENGINEERING
+================================================================================
+
+5.1 DIABETES PIPELINE
+---------------------
+
+  Step 1: Load CSV with pandas
+  Step 2: Handle missing values using median imputation
+  Step 3: Drop "Income" column to avoid socioeconomic bias
+  Step 4: Binarise target: Diabetes_binary = (Diabetes_012 > 0).astype(int)
+  Step 5: Stratified 70/15/15 train/validation/test split
+  Step 6: SMOTE (Synthetic Minority Oversampling Technique)
+           - Balances the imbalanced classes (majority class ~86% non-diabetic)
+           - Applied ONLY on the training set (not validation/test)
+  Step 7: SelectKBest(chi2, k=12) — Feature selection
+           - Reduces 20 features to the top 12 most statistically significant
+           - Uses chi-squared test for feature ranking
+  Step 8: Save selected feature names to models/feature_names.json
+  Step 9: Compute training statistics (mean, std, min, max) per feature
+           for drift detection → saved to models/training_stats.json
+
+  Selected 12 Features (Diabetes):
+    HighBP, HighChol, BMI, Stroke, HeartDiseaseorAttack, PhysActivity,
+    HvyAlcoholConsump, GenHlth, MentHlth, PhysHlth, DiffWalk, Age
+
+5.2 HEART DISEASE PIPELINE
+---------------------------
+
+  Step 1: Load CSV (semicolon separator)
+  Step 2: Handle missing values using median imputation
+  Step 3: Drop duplicate rows
+  Step 4: Feature engineering:
+           - age_years = age / 365.25
+           - bmi = weight / (height/100)^2
+           - gender = gender - 1
+  Step 5: Select 10 features for training
+  Step 6: Stratified 70/15/15 split
+  Step 7: SMOTE oversampling on training set
+  Step 8: SelectKBest(f_classif, k=10) — uses ANOVA F-test
+  Step 9: Save training stats for drift detection
+
+  Selected 10 Features (Heart):
+    gender, age_years, bmi, ap_hi, ap_lo, cholesterol, gluc,
+    smoke, alco, active
+
+
+================================================================================
+6. MACHINE LEARNING MODELS USED
+================================================================================
+
+Both pipelines train and compare the following 5 classifiers. Each model is
+wrapped in a scikit-learn Pipeline with StandardScaler for consistent
+preprocessing during training and inference.
+
+  ┌──────────────────────────┬─────────────────────────────────────────────┐
+  │ Model                    │ Key Hyperparameters                        │
+  ├──────────────────────────┼─────────────────────────────────────────────┤
+  │ Logistic Regression      │ C=1.0, max_iter=1000                       │
+  │ Decision Tree            │ max_depth=10                               │
+  │ Random Forest            │ n_estimators=200, max_depth=12, n_jobs=-1  │
+  │ Support Vector Machine   │ kernel=rbf, C=1.0, probability=True        │
+  │ XGBoost                  │ n_estimators=300, max_depth=6, lr=0.1      │
+  └──────────────────────────┴─────────────────────────────────────────────┘
+
+  Additional notes:
+  - SVM is subsampled to 30,000 rows (O(n^2) computational cost).
+  - All models use random_state=42 for reproducibility.
+  - StandardScaler normalises features before classification.
+  - Each model is wrapped in: Pipeline([("scaler", StandardScaler()), ("clf", ...)])
+
+  The older version of the training script (model_summary.json) also included
+  Gradient Boosting (sklearn GradientBoostingClassifier) in addition to the
+  above models.
+
+
+================================================================================
+7. MODEL EVALUATION & ACCURACY
+================================================================================
+
+7.1 DIABETES MODEL RESULTS
+----------------------------
+
+All metrics are evaluated on the held-out TEST set (15% of data).
+
+  ┌──────────────────────┬──────────┬───────────┬────────┬────────┬─────────┐
+  │ Model                │ Accuracy │ Precision │ Recall │   F1   │ ROC-AUC │
+  ├──────────────────────┼──────────┼───────────┼────────┼────────┼─────────┤
+  │ Logistic Regression  │  0.7287  │  0.8444   │ 0.7287 │ 0.7626 │ 0.8137  │
+  │ Decision Tree        │  0.7940  │  0.8279   │ 0.7940 │ 0.8075 │ 0.8034  │
+  │ Random Forest        │  0.8101  │  0.8321   │ 0.8101 │ 0.8194 │ 0.8125  │
+  │ Gradient Boosting    │  0.8428  │  0.8203   │ 0.8428 │ 0.8272 │ 0.8110  │
+  │ SVM                  │  0.7835  │  0.8325   │ 0.7835 │ 0.8017 │ 0.7883  │
+  └──────────────────────┴──────────┴───────────┴────────┴────────┴─────────┘
+
+  BEST MODEL (Diabetes): Gradient Boosting
+    - F1 Score:   0.8272 (82.72%)
+    - Accuracy:   0.8428 (84.28%)
+    - ROC-AUC:    0.8110 (81.10%)
+    - Precision:  0.8203 (82.03%)
+    - Recall:     0.8428 (84.28%)
+
+  Model artifact saved as: models/best_model_v2.pkl
+
+7.2 HEART DISEASE MODEL RESULTS
+---------------------------------
+
+  ┌──────────────────────┬──────────┬───────────┬────────┬────────┬─────────┐
+  │ Model                │ Accuracy │ Precision │ Recall │   F1   │ ROC-AUC │
+  ├──────────────────────┼──────────┼───────────┼────────┼────────┼─────────┤
+  │ Logistic Regression  │  0.7101  │  0.7115   │ 0.7101 │ 0.7096 │ 0.7733  │
+  │ Decision Tree        │  0.7178  │  0.7191   │ 0.7178 │ 0.7174 │ 0.7714  │
+  │ Random Forest        │  0.7270  │  0.7282   │ 0.7270 │ 0.7267 │ 0.7939  │
+  │ SVM                  │  0.7160  │  0.7167   │ 0.7160 │ 0.7157 │ 0.7720  │
+  │ XGBoost              │  0.7264  │  0.7273   │ 0.7264 │ 0.7261 │ 0.7914  │
+  └──────────────────────┴──────────┴───────────┴────────┴────────┴─────────┘
+
+  BEST MODEL (Heart): Random Forest
+    - F1 Score:   0.7267 (72.67%)
+    - Accuracy:   0.7270 (72.70%)
+    - ROC-AUC:    0.7939 (79.39%)
+    - Precision:  0.7282 (72.82%)
+    - Recall:     0.7270 (72.70%)
+
+  Model artifact saved as: models/heart_model.pkl
+
+7.3 MODEL SELECTION CRITERION
+-------------------------------
+  The best model is selected by the highest MACRO F1 SCORE on the test set.
+  F1 is chosen over accuracy because the datasets are imbalanced (especially
+  the diabetes dataset where ~86% of samples are non-diabetic). F1 balances
+  precision and recall, making it more suitable for medical classification.
+
+
+================================================================================
+8. BEST MODEL SELECTION
+================================================================================
+
+  - Diabetes: Gradient Boosting (GradientBoostingClassifier from sklearn)
+    → F1 = 0.8272, Accuracy = 84.28%, ROC-AUC = 0.811
+
+  - Heart Disease: Random Forest (RandomForestClassifier, 200 trees, depth 12)
+    → F1 = 0.7267, Accuracy = 72.70%, ROC-AUC = 0.7939
+
+  Both models are saved as serialised joblib/pickle files and loaded at API
+  startup for real-time inference.
+
+
+================================================================================
+9. EXPLAINABILITY (SHAP)
+================================================================================
+
+SHAP (SHapley Additive exPlanations) is integrated for transparent, explainable
+AI predictions:
+
+  - TreeExplainer is used for tree-based models (Random Forest, XGBoost,
+    Gradient Boosting, Decision Tree).
+  - LinearExplainer is used for linear models (Logistic Regression).
+  - Per-prediction SHAP values are computed for every API call.
+  - Top 5 most influential features are returned with:
+      * Feature name
+      * Impact magnitude
+      * Direction ("increases" or "decreases" risk)
+  - A human-readable SHAP summary narrative is generated.
+  - A global SHAP feature importance plot is saved as models/shap_global.png
+    during training.
+  - If SHAP computation fails, a scaled-input heuristic fallback is used.
+
+  Example SHAP output:
+    "High risk — primarily driven by: High BP, BMI, General Health."
+
+
+================================================================================
+10. LLMs & AI INTEGRATIONS
+================================================================================
+
+The project integrates multiple LLMs for AI-powered features:
+
+10.1 GOOGLE GEMINI 3.5 FLASH (Frontend Server)
+-------------------------------------------------
+  - SDK:         @google/genai (v2.4.0)
+  - Model:       gemini-3.5-flash
+  - Used for:
+    a) Symptom Triage Analysis (/api/analyze-symptoms)
+       → Provides clinical triage levels (Green/Yellow/Red), pathophysiological
+         considerations, diagnostic questions, and patient safeguards.
+    b) Prediction Explainability Narratives (/api/predict-explain)
+       → Generates comprehensive clinical explanation reports for diabetes and
+         heart predictions with critical risk identifiers, pathology mechanisms,
+         and intervention advice.
+    c) Interactive Diagnostic Chatbot (/api/chat)
+       → Multi-turn conversation about SHAP values, clinical parameters,
+         MLOps concepts, and health guidance.
+  - Fallback:    High-fidelity simulated responses when GEMINI_API_KEY is not
+                 configured (the system degrades gracefully).
+
+10.2 OPENROUTER / GPT-4o-mini (Backend API)
+---------------------------------------------
+  - API:         OpenRouter (openrouter.ai/api/v1)
+  - Model:       openai/gpt-4o-mini (default, configurable)
+  - Used for:
+    a) Chat Endpoint (/chat)
+       → Short, clear health guidance via the VitalAI assistant.
+    b) Personalised Recommendations
+       → Generates 3-6 tailored, actionable health recommendations based on
+         user's health indicators and prediction results.
+  - Config:      OPENROUTER_API_KEY, OPENROUTER_MODEL environment variables.
+
+10.3 OLLAMA / Llama 3.1 (Backend API — Optional)
+--------------------------------------------------
+  - URL:         http://localhost:11434 (local Ollama instance)
+  - Model:       llama3.1
+  - Used for:    Generating personalised health recommendations when available.
+  - Timeout:     6 seconds (fast fallback if unavailable).
+  - Config:      OLLAMA_URL, OLLAMA_MODEL, OLLAMA_ENABLE environment variables.
+
+  FALLBACK HIERARCHY FOR RECOMMENDATIONS:
+    1. Try Ollama (local LLM) → if available, return AI-generated recommendations
+    2. If Ollama fails → use rule-based recommendations engine
+       (heuristic rules based on BMI, blood pressure, cholesterol, etc.)
+
+
+================================================================================
+11. SYSTEM ARCHITECTURE
+================================================================================
+
+  The runtime architecture follows a clean three-tier design:
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                         FRONTEND (React + Vite)                       │
+  │  Port 3000 | Express server + Vite middleware                         │
+  │  Clinical Dashboard | Predictor Forms | SHAP Visualizations           │
+  │  Chatbot | Drift Console | Symptom Analyzer                          │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                             ↓  HTTP  ↓                                │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                     BACKEND API (FastAPI + Uvicorn)                    │
+  │  Port 8000 | ML Inference | SHAP Computation | Drift Detection        │
+  │  User Auth | Prediction History | Alerts | OpenRouter Chat            │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                             ↓  SQLite  ↓                              │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                     DATABASE (SQLite)                                  │
+  │  Tables: users, predictions, alert_settings, alerts                   │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                     MLFLOW (Experiment Tracking)                       │
+  │  Port 5000 | Parameters | Metrics | Model Registry                   │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  FLOW:
+    1. User opens the React dashboard and enters health parameters.
+    2. Frontend sends a POST request to FastAPI (/predict or /predict-heart).
+    3. FastAPI loads the saved model pipeline from disk (best_model_v2.pkl).
+    4. The model returns prediction, probabilities, and SHAP explanations.
+    5. Results are displayed as a clinical-style risk assessment.
+    6. Prediction is logged to SQLite for history tracking.
+    7. Optionally, Gemini generates extended clinical narratives.
+
+
+================================================================================
+12. TECH STACK
+================================================================================
+
+  BACKEND / ML:
+  ─────────────
+  - Python 3.11
+  - scikit-learn 1.7.2      (ML pipelines, classifiers, preprocessing)
+  - XGBoost 2.1.4            (gradient boosting classifier)
+  - pandas 2.3.3             (data loading and manipulation)
+  - numpy 2.2.6              (numerical operations)
+  - imbalanced-learn 0.14.1  (SMOTE oversampling)
+  - SHAP 0.46.0              (model explainability)
+  - MLflow 2.22.4            (experiment tracking, model registry)
+  - FastAPI 0.111.0          (REST API framework)
+  - Uvicorn 0.29.0           (ASGI server)
+  - Pydantic 2.11.7          (data validation and serialisation)
+  - joblib 1.4.2             (model serialisation)
+  - httpx 0.27.0             (HTTP client for LLM API calls)
+  - bcrypt 3.2.2             (password hashing)
+  - passlib 1.7.4            (password hashing context)
+  - python-dotenv 1.0.1      (environment variable management)
+  - SQLite 3                 (embedded database)
+
+  FRONTEND:
+  ─────────
+  - React 19.0.1             (UI framework)
+  - TypeScript ~5.8.2        (type-safe JavaScript)
+  - Vite 6.2.3               (build tool and dev server)
+  - Tailwind CSS 4.1.14      (utility-first CSS framework)
+  - Framer Motion 12.40.0    (animations and transitions)
+  - GSAP 3.15.0              (advanced animations)
+  - Recharts 3.8.1           (data visualisation / charts)
+  - Lucide React 0.546.0     (icon library)
+  - Radix UI                 (accessible UI components)
+  - Express 4.21.2           (Node.js server for Gemini API proxy)
+  - Firebase 12.13.0         (Google OAuth authentication)
+  - @google/genai 2.4.0      (Gemini SDK for AI features)
+
+  DEVOPS / MLOPS:
+  ───────────────
+  - Docker                   (containerisation)
+  - Docker Compose 3.9       (multi-service orchestration)
+  - GitHub Actions            (CI/CD automation)
+  - MLflow                   (experiment tracking, model registry)
+  - GHCR                     (GitHub Container Registry)
+
+  TESTING:
+  ────────
+  - pytest 8.2.0             (test framework)
+  - pytest-asyncio 0.23.6    (async test support)
+  - pytest-cov               (code coverage)
+
+
+================================================================================
+13. BACKEND API (FastAPI)
+================================================================================
+
+The FastAPI backend (api/main.py, v3.0.0) exposes the following endpoints:
+
+  SYSTEM ENDPOINTS:
+  ─────────────────
+  GET  /health              → System health check (model loaded, SHAP ready,
+                               drift stats available, heart model status)
+  GET  /model-info          → Returns the full model_summary.json
+  GET  /model-metrics       → Returns all model metrics + best model + features
+  GET  /feature-importance  → Returns global feature importance values and
+                               optional SHAP plot path
+
+  PREDICTION ENDPOINTS:
+  ─────────────────────
+  POST /predict             → Diabetes risk prediction
+                               Input: 13 BRFSS health indicators
+                               Output: prediction, label, probabilities,
+                               confidence %, risk level, SHAP explanation,
+                               recommendations, drift detection, alerts
+
+  POST /predict-heart       → Heart disease risk prediction
+                               Input: 10 cardiovascular features
+                               Output: same schema as /predict with
+                               heart-specific labels
+
+  POST /predict-symptoms    → Symptom-based diabetes prediction
+                               Input: symptom list, severity, age, BMI
+                               Output: derived clinical inputs + prediction
+
+  MONITORING ENDPOINTS:
+  ─────────────────────
+  POST /log-input           → Log raw input for drift tracking (no prediction)
+  GET  /user-history        → Retrieve user's prediction history (paginated)
+
+  AUTHENTICATION ENDPOINTS:
+  ─────────────────────────
+  POST /auth/register       → Email/password registration
+  POST /auth/login          → Email/password login
+  POST /auth/google         → Google OAuth login (via Firebase token)
+
+  ALERT ENDPOINTS:
+  ────────────────
+  POST /alert-config        → Set per-user risk alert threshold and channel
+  GET  /alerts              → Retrieve user's alert history
+
+  CHATBOT ENDPOINT:
+  ─────────────────
+  POST /chat                → Health guidance chatbot via OpenRouter/GPT-4o-mini
+
+  RISK LEVEL MAPPING:
+  ───────────────────
+  - Low:       probability < 25%
+  - Moderate:  25% ≤ probability < 50%
+  - High:      50% ≤ probability < 75%
+  - Very High: probability ≥ 75%
+
+
+================================================================================
+14. FRONTEND (React + Vite)
+================================================================================
+
+The frontend is a premium, clinical-grade dashboard with the following pages
+and features:
+
+  PAGES / TABS:
+  ─────────────
+  1. Dashboard (Home)
+     - Cinematic hero section with animated introduction
+     - Medical Predictive Systems Hub overview
+     - Statistics grid cards (Endocrine Risk, Cardiac, Symptom AI)
+     - Model Performance Index display (ROC-AUC, F1, Brier Score)
+     - Data Drift Alarm card with retraining button
+     - User prediction history table
+     - AI-powered "Medical AI Evolution" timeline
+
+  2. Diabetes Predictor
+     - Interactive form with 12 health indicator inputs
+     - Real-time SHAP force diagram visualisation
+     - Risk score gauge / meter
+     - AI-generated clinical report (via Gemini or backend)
+     - Personalised health recommendations
+     - Prediction history tracking
+
+  3. Heart Disease Predictor
+     - 10 cardiovascular parameter inputs
+     - 3D interactive beating heart model viewer
+     - SHAP explanation panel
+     - Risk assessment with colour-coded severity
+     - Heart-specific recommendations
+
+  4. Symptom AI Clinician
+     - Free-text symptom input
+     - Preset symptom chips for quick selection
+     - AI-powered triage analysis (via Gemini)
+     - Symptom-to-feature mapping engine
+     - Clinical triage levels (Green/Yellow/Red)
+
+  5. MLOps Drift Console
+     - Kolmogorov-Smirnov drift statistics display
+     - Drift detection status (stable vs. drifted)
+     - Simulated model retraining pipeline with live logs
+     - Training statistics comparison
+
+  6. AI Chatbot
+     - Multi-turn conversational interface
+     - Powered by Gemini 3.5 Flash
+     - Topics: SHAP values, clinical parameters, drift monitoring
+
+  7. Sign In / Sign Up Page
+     - Email/password authentication
+     - Google OAuth (Firebase)
+     - Clinical testimonials display
+
+  UI DESIGN:
+  ──────────
+  - Dark theme with emerald/violet accent colours
+  - Glassmorphism effects
+  - Framer Motion and GSAP animations
+  - Responsive layout (mobile + desktop)
+  - Sidebar navigation with medical icons
+  - Modern typography and professional medical styling
+
+
+================================================================================
+15. DATABASE
+================================================================================
+
+  Engine:     SQLite 3 (embedded, file-based)
+  Files:      database/predictions.db, database/predictions_v3.db
+
+  TABLES:
+  ───────
+  1. users
+     - email (PRIMARY KEY)
+     - name
+     - password_hash (bcrypt)
+     - created_at
+
+  2. predictions
+     - id (AUTO INCREMENT)
+     - user_id
+     - input_data (JSON)
+     - prediction (0 or 1)
+     - probability (float)
+     - risk_level
+     - shap_top (JSON)
+     - shap_summary (text)
+     - recommendations (JSON)
+     - drift_detected (boolean)
+     - timestamp
+
+  3. alert_settings
+     - user_id (PRIMARY KEY)
+     - threshold (float, default 0.7)
+     - channel (in_app / email / sms)
+     - created_at
+
+  4. alerts
+     - id (AUTO INCREMENT)
+     - user_id
+     - message
+     - risk_level
+     - probability
+     - created_at
+     - read_flag (boolean)
+
+
+================================================================================
+16. USER AUTHENTICATION
+================================================================================
+
+  Two authentication methods are supported:
+
+  1. Email/Password Registration & Login
+     - Passwords are hashed using bcrypt via passlib
+     - POST /auth/register → creates new user
+     - POST /auth/login → verifies credentials
+
+  2. Google OAuth (via Firebase)
+     - Frontend uses Firebase SDK (firebase/auth, signInWithPopup)
+     - Google provider configured in frontend Firebase config
+     - POST /auth/google → syncs Google user with backend database
+     - Auto-creates account on first Google sign-in
+
+
+================================================================================
+17. MLOps PIPELINE
+================================================================================
+
+The MLOps pipeline ensures reproducibility, tracking, and automation:
+
+  MLFLOW INTEGRATION:
+  ───────────────────
+  - Tracking URI: mlruns/ (local directory)
+  - Experiment Names: "diabetes-prediction", "heart-disease-prediction"
+  - Logged per run:
+    * Parameters: model name, k_features, smote, seed
+    * Metrics: accuracy, precision, recall, f1, roc_auc (test + validation)
+    * Artifacts: trained scikit-learn pipeline
+    * Registered Models: DiabetesClassifier, HeartDiseaseClassifier
+  - MLflow UI available at port 5000
+
+  SAVED ARTIFACTS:
+  ────────────────
+  - models/best_model_v2.pkl       → Best diabetes model pipeline
+  - models/heart_model.pkl         → Best heart disease model pipeline
+  - models/feature_names.json      → Selected feature list (diabetes)
+  - models/heart_feature_names.json → Selected feature list (heart)
+  - models/model_summary.json      → All model metrics + best model name
+  - models/heart_model_summary.json → Heart model metrics + best model name
+  - models/training_stats.json     → Training data statistics (for drift)
+  - models/heart_training_stats.json → Heart training data statistics
+  - models/shap_global.png         → SHAP global feature importance plot
+
+
+================================================================================
+18. CI/CD (GitHub Actions)
+================================================================================
+
+File: .github/workflows/ci-cd.yml
+
+The CI/CD pipeline runs on push to main/develop branches and consists of
+7 stages:
+
+  STAGE 1: CHECKOUT & SETUP
+  ─────────────────────────
+  - Checkout code
+  - Setup Python 3.11
+  - Cache pip dependencies
+  - Install requirements.txt
+
+  STAGE 2: LINT
+  ─────────────
+  - Ruff lint check on ml/ and api/ directories
+  - mypy type-check on api/main.py
+
+  STAGE 3: TEST (Coverage Gate ≥ 80%)
+  ────────────────────────────────────
+  - Run: pytest tests/ -v --tb=short --cov=. --cov-fail-under=80
+  - Fail build if coverage drops below 80%
+
+  STAGE 4: TRAIN (main/develop only)
+  ───────────────────────────────────
+  - Run: python ml/train.py
+  - Produces best_model_v2.pkl, feature_names.json, model_summary.json
+  - Upload training artifacts (30-day retention)
+
+  STAGE 5: EVALUATE (main only)
+  ─────────────────────────────
+  - Download trained model artifacts
+  - Verify best model F1 score > 0.5 (quality gate)
+
+  STAGE 6: BUILD DOCKER IMAGE (main only)
+  ────────────────────────────────────────
+  - Multi-stage Docker build (trainer → api)
+  - Push to GitHub Container Registry (ghcr.io)
+  - Tags: sha-{commit}, latest
+  - GHA cache for fast rebuilds
+
+  STAGE 7: DEPLOY (main only)
+  ───────────────────────────
+  - Placeholder for platform-specific deployment
+  - Supports: Render, Railway, AWS ECS
+  - Triggered after successful build
+
+
+================================================================================
+19. DOCKER CONTAINERISATION
+================================================================================
+
+  DOCKERFILE (Multi-stage):
+  ─────────────────────────
+  Stage 1 — TRAINER:
+    - Base: python:3.11-slim
+    - Copies data/, ml/, models/
+    - Runs: python ml/train.py → produces best_model_v2.pkl
+
+  Stage 2 — API:
+    - Base: python:3.11-slim
+    - Copies api/ source and trained model artifacts from Stage 1
+    - Exposes port 8000
+    - Healthcheck: GET http://localhost:8000/health every 30s
+    - Entrypoint: uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+  DOCKER COMPOSE (docker-compose.yml):
+  ─────────────────────────────────────
+  3 services:
+
+  1. api (Port 8000)
+     - Builds from Dockerfile, target: api
+     - Volumes: ./models, ./mlruns
+     - Environment: MODEL_DIR, MLFLOW_TRACKING_URI, OPENROUTER_API_KEY
+     - Healthcheck + restart: unless-stopped
+
+  2. mlflow (Port 5000)
+     - Image: python:3.11-slim
+     - Command: pip install mlflow && mlflow ui --host 0.0.0.0 --port 5000
+     - Depends on: api
+
+  3. frontend (Port 3000)
+     - Image: node:20-alpine
+     - Command: npm install && npm run build && npm run start
+     - Environment: VITE_API_URL=http://localhost:8000
+     - Depends on: api
+
+
+================================================================================
+20. DATA DRIFT DETECTION
+================================================================================
+
+The system implements statistical data drift detection using z-score analysis:
+
+  MECHANISM:
+  ──────────
+  1. During training, per-feature statistics (mean, std, min, max) are
+     computed on the ORIGINAL training data (pre-SMOTE) and saved to
+     models/training_stats.json.
+
+  2. At inference time, each incoming prediction request's feature values are
+     compared against the training distribution.
+
+  3. For each feature: z = |x_input - mean| / std
+     If z > 3.5 (more than 3.5 standard deviations from training mean),
+     the feature is flagged as anomalous.
+
+  4. If 2 or more features are anomalous → DRIFT DETECTED.
+
+  5. Drift status is included in every prediction response.
+
+  FRONTEND DRIFT CONSOLE:
+  ───────────────────────
+  - Displays Kolmogorov-Smirnov drift statistics
+  - Shows current vs. baseline epoch comparison
+  - Provides a "Retrain" button that simulates an automated retraining
+    pipeline with live terminal-style logs
+  - Displays post-retrain improvement metrics
+
+
+================================================================================
+21. ALERT SYSTEM
+================================================================================
+
+  - Users can configure per-user alert thresholds (default: 0.7 / 70%)
+  - When a prediction's probability_yes exceeds the user's threshold,
+    an alert is automatically created and stored in the database.
+  - Alerts include: message, risk level, probability, timestamp.
+  - Users can retrieve their alert history via GET /alerts.
+  - Alert channels: in_app (default), email, sms (configurable).
+
+
+================================================================================
+22. TESTING
+================================================================================
+
+  Framework: pytest
+  Files:     tests/test_api.py, tests/test_ml.py
+
+  API TESTS (test_api.py — 11 tests):
+  ────────────────────────────────────
+  - test_health                  → Health endpoint returns status=ok
+  - test_predict_default_payload → Default payload accepted
+  - test_predict_valid           → Valid prediction returns correct schema
+  - test_predict_invalid_bmi     → BMI < 10 returns 422 validation error
+  - test_predict_invalid_genhlth → GenHlth > 5 returns 422 validation error
+  - test_predict_response_fields → All required fields present in response
+  - test_confidence_equals_prob  → Confidence = probability_yes * 100
+  - test_predict_heart           → Heart prediction endpoint works
+  - test_predict_symptoms        → Symptom prediction endpoint works
+  - test_alert_config            → Alert configuration endpoint works
+  - test_chat_endpoint           → Chat endpoint handles API key scenarios
+
+  ML TESTS (test_ml.py — 7 tests):
+  ─────────────────────────────────
+  - test_pipeline_fit_predict    → Pipeline (scaler + classifier) trains OK
+  - test_smote_balances_classes  → SMOTE produces equal class counts
+  - test_select_kbest_reduces   → SelectKBest returns exactly 12 features
+  - test_dataset_columns        → Dataset has exactly 22 columns
+  - test_no_nulls_after_fill    → No nulls after median imputation
+  - test_target_binarisation    → Binarised target contains only {0, 1}
+  - test_xgboost_importable     → XGBoost installs and trains correctly
+
+  Coverage Gate: ≥ 80% (enforced in CI/CD pipeline)
+
+
+================================================================================
+23. KEY FEATURES SUMMARY
+================================================================================
+
+  ✅ Multi-Disease Prediction (Diabetes + Heart Disease)
+  ✅ 5+ ML Models Trained and Compared (LR, DT, RF, SVM, XGBoost, GB)
+  ✅ SMOTE for Imbalanced Data Handling
+  ✅ SelectKBest Feature Selection (chi2 / ANOVA F-test)
+  ✅ SHAP Explainability for Every Prediction
+  ✅ LLM Integration (Google Gemini 3.5 Flash + GPT-4o-mini + Llama 3.1)
+  ✅ AI Symptom Triage Analyzer
+  ✅ Interactive AI Chatbot
+  ✅ Clinical-Grade React Dashboard with Animations
+  ✅ 3D Interactive Heart Model Viewer
+  ✅ User Authentication (Email + Google OAuth/Firebase)
+  ✅ Prediction History Tracking (SQLite)
+  ✅ Data Drift Detection (Statistical z-score Analysis)
+  ✅ Automated Alert System with Configurable Thresholds
+  ✅ MLflow Experiment Tracking and Model Registry
+  ✅ Docker + Docker Compose Multi-Service Deployment
+  ✅ GitHub Actions CI/CD (7-stage Pipeline)
+  ✅ Automated Testing with 80%+ Code Coverage Gate
+  ✅ Rule-Based and AI-Generated Health Recommendations
+  ✅ REST API with Auto-Generated Swagger/OpenAPI Docs
+  ✅ Graceful Fallback (works without LLM API keys)
+
+
+================================================================================
+24. PROJECT OUTCOMES
+================================================================================
+
+  1. CLINICAL PREDICTION ACCURACY:
+     - Diabetes: 84.28% accuracy, F1 = 0.8272, ROC-AUC = 0.811
+     - Heart Disease: 72.70% accuracy, F1 = 0.7267, ROC-AUC = 0.794
+
+  2. EXPLAINABLE AI:
+     Every prediction comes with SHAP-based feature attribution, making the
+     model's decision process transparent for clinical use.
+
+  3. PRODUCTION-READY DEPLOYMENT:
+     The project demonstrates a complete path from raw data → trained model →
+     containerised API → automated CI/CD → production deployment.
+
+  4. MULTI-MODAL AI INTEGRATION:
+     Classical ML models for prediction + LLMs for clinical narratives and
+     conversational AI = a comprehensive health AI system.
+
+  5. ROBUST DATA HANDLING:
+     253,680+ diabetes records and 70,000+ cardiac records processed with
+     SMOTE oversampling, feature selection, and drift detection.
+
+  6. USER-FACING DASHBOARD:
+     A fully functional, aesthetically polished web application that any
+     user or clinician can interact with — not just a notebook.
+
+  7. COMPLETE MLOPS LIFECYCLE:
+     Data → Preprocess → Train → Evaluate → Track → Deploy → Monitor → Retrain.
+     All stages are automated and reproducible.
+
+
+================================================================================
+25. PROJECT DIRECTORY STRUCTURE
+================================================================================
+
+  diabetes-mlops/
+  ├── .github/
+  │   └── workflows/
+  │       └── ci-cd.yml              # GitHub Actions CI/CD pipeline (7 stages)
+  ├── api/
+  │   ├── __init__.py
+  │   ├── database/                  # Database module
+  │   └── main.py                    # FastAPI backend (1200 lines, v3.0.0)
+  ├── data/
+  │   ├── diabetes_012_health_indicators_BRFSS2015.csv  (22 MB, 253K rows)
+  │   └── cardio_train.csv                              (2.9 MB, 70K rows)
+  ├── database/
+  │   ├── predictions.db             # SQLite database (users, predictions, alerts)
+  │   └── predictions_v3.db          # Backup / versioned database
+  ├── frontend/
+  │   ├── src/
+  │   │   └── App.tsx                # Main React application (1956 lines)
+  │   ├── components/                # Reusable UI components
+  │   ├── lib/                       # Utilities, Firebase config, mock generators
+  │   ├── assets/                    # Static images
+  │   ├── server.ts                  # Express server + Gemini API proxy (319 lines)
+  │   ├── package.json               # Frontend dependencies
+  │   ├── vite.config.ts             # Vite configuration
+  │   └── tsconfig.json              # TypeScript configuration
+  ├── ml/
+  │   ├── __init__.py
+  │   ├── train.py                   # Diabetes ML pipeline + MLflow (282 lines)
+  │   └── train_heart.py             # Heart disease ML pipeline (234 lines)
+  ├── mlruns/                        # MLflow experiment tracking data
+  ├── models/
+  │   ├── best_model_v2.pkl          # Best diabetes model (~33 MB)
+  │   ├── best_model.joblib          # Legacy model (~1 MB)
+  │   ├── heart_model.pkl            # Best heart model (~40 MB)
+  │   ├── feature_names.json         # 12 selected diabetes features
+  │   ├── heart_feature_names.json   # 10 selected heart features
+  │   ├── model_summary.json         # Diabetes model comparison metrics
+  │   ├── heart_model_summary.json   # Heart model comparison metrics
+  │   ├── training_stats.json        # Training stats for drift detection
+  │   ├── heart_training_stats.json  # Heart training stats for drift
+  │   └── models_comparison.json     # Historical model comparison
+  ├── sections/                      # UI section design specifications
+  ├── tests/
+  │   ├── conftest.py                # Pytest fixtures
+  │   ├── test_api.py                # API endpoint tests (11 tests)
+  │   └── test_ml.py                 # ML pipeline tests (7 tests)
+  ├── .env                           # Environment variables
+  ├── .gitignore
+  ├── Dockerfile                     # Multi-stage Docker build
+  ├── docker-compose.yml             # 3-service orchestration
+  ├── requirements.txt               # Python dependencies (28 packages)
+  ├── run_train.py                   # Standalone training script (no MLflow)
+  └── README.md                      # Project documentation
+
+
+================================================================================
+26. HOW TO RUN THE PROJECT
+================================================================================
+
+  OPTION 1: LOCAL DEVELOPMENT
+  ────────────────────────────
+
+  Step 1: Set up Python environment
+    > python -m venv .venv
+    > .venv\Scripts\activate
+    > pip install -r requirements.txt
+
+  Step 2: Train the diabetes model
+    > python ml/train.py
+
+  Step 3: Train the heart disease model
+    > python ml/train_heart.py
+
+  Step 4: Start the FastAPI backend
+    > uvicorn api.main:app --reload --port 8000
+
+  Step 5: Start MLflow UI (optional)
+    > mlflow ui --port 5000
+
+  Step 6: Start the frontend
+    > cd frontend
+    > npm install
+    > copy .env.example .env
+    > (edit .env and set GEMINI_API_KEY)
+    > npm run dev
+
+  Step 7: Open http://localhost:3000 in your browser
+
+  OPTION 2: DOCKER COMPOSE (Full Stack)
+  ──────────────────────────────────────
+
+    > docker compose up --build
+
+    This starts all 3 services:
+    - API:      http://localhost:8000
+    - MLflow:   http://localhost:5000
+    - Frontend: http://localhost:3000
+
+  RUNNING TESTS:
+    > pytest tests/ -v
+
+
+================================================================================
+27. DISCLAIMER
+================================================================================
+
+This project is for EDUCATIONAL AND RESEARCH PURPOSES ONLY. It is NOT a
+certified medical device and should NOT be used for clinical diagnosis,
+treatment decisions, or as a substitute for professional medical advice.
+Always consult qualified healthcare professionals for medical concerns.
+
+License: MIT License
+
+
+================================================================================
+                           END OF PROJECT REPORT
+================================================================================

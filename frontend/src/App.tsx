@@ -122,10 +122,12 @@ const timelineEvents = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [showSignIn, setShowSignIn] = useState<boolean>(false);
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
-  const [userEmail, setUserEmail] = useState<string>("clinical-user@health.io");
-  const [userName, setUserName] = useState<string>("Resident MD");
+  // Restore session from localStorage to prevent logout on page refresh
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(() => !!localStorage.getItem("hg_user_email"));
+  const [userEmail, setUserEmail] = useState<string>(() => localStorage.getItem("hg_user_email") || "clinical-user@health.io");
+  const [userName, setUserName] = useState<string>(() => localStorage.getItem("hg_user_name") || "Resident MD");
   const [userHistory, setUserHistory] = useState<any[]>([]);
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
 
   const fetchUserHistory = async (email: string) => {
     try {
@@ -174,16 +176,33 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persistent Auth State Listener to maintain login across page reloads
+  // Helper: save session to localStorage
+  const persistSession = (email: string, name: string) => {
+    localStorage.setItem("hg_user_email", email);
+    localStorage.setItem("hg_user_name", name);
+  };
+
+  // Helper: clear session from localStorage
+  const clearSession = () => {
+    localStorage.removeItem("hg_user_email");
+    localStorage.removeItem("hg_user_name");
+  };
+
+  // Persistent Auth State Listener for Google/Firebase auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && user.email) {
+        const name = user.displayName || "Google User";
         setIsSignedIn(true);
         setUserEmail(user.email);
-        setUserName(user.displayName || "Google User");
+        setUserName(name);
+        persistSession(user.email, name);
         await fetchUserHistory(user.email);
       } else {
-        setIsSignedIn(false);
+        // Only clear if not an email/password session stored in localStorage
+        if (!localStorage.getItem("hg_user_email")) {
+          setIsSignedIn(false);
+        }
       }
     });
     return () => unsubscribe();
@@ -353,8 +372,10 @@ export default function App() {
   // Tab switching handler
   const handleTabChange = (tabId: string) => {
     if (tabId === "logout") {
+      clearSession();
       setIsSignedIn(false);
       setUserEmail("guest-clinician@health.io");
+      setUserName("Resident MD");
       setActiveTab("dashboard");
       return;
     }
@@ -537,9 +558,10 @@ export default function App() {
     }, 5500);
   };
 
-  // Log in simulation handler
+  // Log in handler
   const handleSignInSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (authLoading) return;
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email")?.toString() || "";
     const password = formData.get("password")?.toString() || "";
@@ -549,6 +571,7 @@ export default function App() {
       return;
     }
 
+    setAuthLoading(true);
     try {
       const response = await fetch(buildApiUrl("/auth/login"), {
         method: "POST",
@@ -560,6 +583,7 @@ export default function App() {
         return;
       }
       const data = await response.json();
+      persistSession(data.email, data.name);
       setIsSignedIn(true);
       setUserEmail(data.email);
       setUserName(data.name);
@@ -568,7 +592,9 @@ export default function App() {
       setActiveTab("dashboard");
     } catch (err) {
       console.error(err);
-      alert("Error connecting to server.");
+      alert("Error connecting to server. The backend may be waking up — please wait a moment and try again.");
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -612,6 +638,8 @@ export default function App() {
           testimonials={sampleSignInTestimonials}
           onSignIn={handleSignInSubmit}
           onGoogleSignIn={async () => {
+            if (authLoading) return;
+            setAuthLoading(true);
             try {
               const result = await signInWithPopup(auth, googleProvider);
               const user = result.user;
@@ -631,7 +659,7 @@ export default function App() {
                 }
 
                 const data = await response.json();
-
+                persistSession(data.email, data.name);
                 setIsSignedIn(true);
                 setUserEmail(data.email);
                 setUserName(data.name);
@@ -657,11 +685,14 @@ export default function App() {
               } else {
                 alert(`Google Sign-In failed: ${error?.message || "Unknown error. Please try again."}`);
               }
+            } finally {
+              setAuthLoading(false);
             }
           }}
           onResetPassword={() => alert("Simulated clinic server reset requested.")}
           onCreateAccount={async (e) => {
             e.preventDefault();
+            if (authLoading) return;
             const formData = new FormData(e.currentTarget);
             const email = formData.get("email")?.toString() || "";
             const password = formData.get("password")?.toString() || "";
@@ -672,6 +703,7 @@ export default function App() {
               return;
             }
 
+            setAuthLoading(true);
             try {
               const response = await fetch(buildApiUrl("/auth/register"), {
                 method: "POST",
@@ -679,10 +711,16 @@ export default function App() {
                 body: JSON.stringify({ name, email, password })
               });
               if (!response.ok) {
-                alert("Email already registered or server error.");
+                // Check if it's a 409 conflict (already registered) or a server error
+                if (response.status === 409) {
+                  alert("This email is already registered. Please sign in instead.");
+                } else {
+                  alert("Server error. The backend may be waking up — please wait a moment and try again.");
+                }
                 return;
               }
               const data = await response.json();
+              persistSession(data.email, data.name);
               setIsSignedIn(true);
               setUserEmail(data.email);
               setUserName(data.name);
@@ -691,7 +729,9 @@ export default function App() {
               setActiveTab("dashboard");
             } catch (err) {
               console.error(err);
-              alert("Error connecting to server.");
+              alert("Error connecting to server. The backend may be waking up — please wait a moment and try again.");
+            } finally {
+              setAuthLoading(false);
             }
           }}
         />

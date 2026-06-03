@@ -1,0 +1,30 @@
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: healthguard-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: MODEL_DIR
+        value: models
+      - key: PYTHONPATH
+        value: /app
+      - key: OPENROUTER_API_KEY
+        sync: false   # set manually in Render dashboard
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
+
+  # ── Frontend Web App ─────────────────────────────────────────────────────────
+  - type: web
+    name: healthguard-frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://healthguard-ai-rpkf.onrender.com
+      - key: GEMINI_API_KEY
+        sync: false   # set manually in Render dashboard

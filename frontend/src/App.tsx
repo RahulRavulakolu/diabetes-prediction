@@ -122,10 +122,10 @@ const timelineEvents = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [showSignIn, setShowSignIn] = useState<boolean>(false);
-  // Restore session from localStorage to prevent logout on page refresh
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(() => !!localStorage.getItem("hg_user_email"));
-  const [userEmail, setUserEmail] = useState<string>(() => localStorage.getItem("hg_user_email") || "clinical-user@health.io");
-  const [userName, setUserName] = useState<string>(() => localStorage.getItem("hg_user_name") || "Resident MD");
+  // Restore session from JWT token stored in localStorage
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(() => !!localStorage.getItem("hg_auth_token"));
+  const [userEmail, setUserEmail] = useState<string>("clinical-user@health.io");
+  const [userName, setUserName] = useState<string>("Resident MD");
   const [userHistory, setUserHistory] = useState<any[]>([]);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
 
@@ -176,17 +176,43 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Helper: save session to localStorage
-  const persistSession = (email: string, name: string) => {
-    localStorage.setItem("hg_user_email", email);
-    localStorage.setItem("hg_user_name", name);
+  // Helper: save JWT token to localStorage
+  const persistSession = (token: string) => {
+    localStorage.setItem("hg_auth_token", token);
   };
 
   // Helper: clear session from localStorage
   const clearSession = () => {
-    localStorage.removeItem("hg_user_email");
-    localStorage.removeItem("hg_user_name");
+    localStorage.removeItem("hg_auth_token");
   };
+
+  // On mount: verify stored JWT token against the database via /auth/me
+  useEffect(() => {
+    const token = localStorage.getItem("hg_auth_token");
+    if (!token) return;
+
+    fetch(buildApiUrl("/auth/me"), {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setIsSignedIn(true);
+          setUserEmail(data.email);
+          setUserName(data.name);
+          await fetchUserHistory(data.email);
+        } else {
+          // Token expired or invalid — clear it
+          clearSession();
+          setIsSignedIn(false);
+        }
+      })
+      .catch(() => {
+        // Network error — keep the signed-in state optimistically
+        // but don't force logout (backend may be waking up)
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Persistent Auth State Listener for Google/Firebase auth
   useEffect(() => {
@@ -196,11 +222,10 @@ export default function App() {
         setIsSignedIn(true);
         setUserEmail(user.email);
         setUserName(name);
-        persistSession(user.email, name);
         await fetchUserHistory(user.email);
       } else {
-        // Only clear if not an email/password session stored in localStorage
-        if (!localStorage.getItem("hg_user_email")) {
+        // Only clear if not a JWT token session
+        if (!localStorage.getItem("hg_auth_token")) {
           setIsSignedIn(false);
         }
       }
@@ -583,7 +608,7 @@ export default function App() {
         return;
       }
       const data = await response.json();
-      persistSession(data.email, data.name);
+      if (data.token) persistSession(data.token);
       setIsSignedIn(true);
       setUserEmail(data.email);
       setUserName(data.name);
@@ -659,7 +684,7 @@ export default function App() {
                 }
 
                 const data = await response.json();
-                persistSession(data.email, data.name);
+                if (data.token) persistSession(data.token);
                 setIsSignedIn(true);
                 setUserEmail(data.email);
                 setUserName(data.name);
@@ -720,7 +745,7 @@ export default function App() {
                 return;
               }
               const data = await response.json();
-              persistSession(data.email, data.name);
+              if (data.token) persistSession(data.token);
               setIsSignedIn(true);
               setUserEmail(data.email);
               setUserName(data.name);

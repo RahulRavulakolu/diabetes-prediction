@@ -8,17 +8,20 @@ from __future__ import annotations
 import json
 import logging
 import os
+import secrets
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 import joblib
 import numpy as np
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 import httpx
 from passlib.context import CryptContext
@@ -26,6 +29,13 @@ from passlib.context import CryptContext
 load_dotenv()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ── JWT Configuration ──────────────────────────────────────────────────────────
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", secrets.token_hex(32))
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_DAYS = 30
+
+security = HTTPBearer(auto_error=False)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -386,6 +396,7 @@ class GoogleLoginRequest(BaseModel):
 class UserResponse(BaseModel):
     name: str
     email: str
+    token: str = ""
 
 class SymptomPredictRequest(BaseModel):
     user_id: str = Field("anonymous", description="Session / user identifier")
@@ -866,14 +877,48 @@ def feature_importance(target: str = Query("diabetes", description="diabetes | h
         "feature_importances": items,
     }
 
+# ── JWT Helpers ───────────────────────────────────────────────────────────────
+
+def _create_token(email: str, name: str) -> str:
+    """Generate a signed JWT token valid for JWT_EXPIRE_DAYS days."""
+    payload = {
+        "sub": email,
+        "name": name,
+        "exp": datetime.utcnow() + timedelta(days=JWT_EXPIRE_DAYS),
+        "iat": datetime.utcnow(),
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def _verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """Decode and validate a Bearer JWT token. Raises 401 on failure."""
+    if credentials is None:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        email: str = payload.get("sub", "")
+        name: str = payload.get("name", "")
+        if not email:
+            raise HTTPException(401, "Invalid token")
+        return {"email": email, "name": name}
+    except JWTError:
+        raise HTTPException(401, "Token is invalid or expired")
+
+
+@app.get("/auth/me", response_model=UserResponse, tags=["Auth"])
+def get_current_user(user: dict = Depends(_verify_token)):
+    """Verify a JWT token and return the associated user — used by the frontend to restore sessions."""
+    return UserResponse(name=user["name"], email=user["email"], token="")
+
+
 @app.post("/auth/register", response_model=UserResponse, tags=["Auth"])
 def register_user(req: UserRegistration):
     conn = _db()
     existing = conn.execute("SELECT email FROM users WHERE email = ?", (req.email,)).fetchone()
     if existing:
         conn.close()
-        raise HTTPException(400, "Email already registered")
-    
+        raise HTTPException(409, "Email already registered")
+
     hashed = pwd_context.hash(req.password)
     try:
         conn.execute(
@@ -885,7 +930,8 @@ def register_user(req: UserRegistration):
         conn.close()
         raise HTTPException(500, f"Database error: {e}")
     conn.close()
-    return UserResponse(name=req.name, email=req.email)
+    token = _create_token(req.email, req.name)
+    return UserResponse(name=req.name, email=req.email, token=token)
 
 @app.post("/auth/login", response_model=UserResponse, tags=["Auth"])
 def login_user(req: UserLogin):
@@ -894,14 +940,15 @@ def login_user(req: UserLogin):
     conn.close()
     if not user or not pwd_context.verify(req.password, user["password_hash"]):
         raise HTTPException(401, "Invalid email or password")
-    
-    return UserResponse(name=user["name"], email=user["email"])
+
+    token = _create_token(user["email"], user["name"])
+    return UserResponse(name=user["name"], email=user["email"], token=token)
 
 @app.post("/auth/google", response_model=UserResponse, tags=["Auth"])
 def login_google(req: GoogleLoginRequest):
     conn = _db()
     user = conn.execute("SELECT email, name FROM users WHERE email = ?", (req.email,)).fetchone()
-    
+
     if not user:
         hashed = pwd_context.hash("GOOGLE_OAUTH_DUMMY_PASSWORD_" + req.email)
         try:
@@ -916,9 +963,10 @@ def login_google(req: GoogleLoginRequest):
             raise HTTPException(500, f"Database error: {e}")
     else:
         user_name = user["name"]
-        
+
     conn.close()
-    return UserResponse(name=user_name, email=req.email)
+    token = _create_token(req.email, user_name)
+    return UserResponse(name=user_name, email=req.email, token=token)
 
 @app.post("/predict", response_model=PredictResponse, tags=["Prediction"])
 def predict(req: PredictRequest, bg: BackgroundTasks):

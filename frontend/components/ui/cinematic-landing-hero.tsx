@@ -245,7 +245,7 @@ export function CinematicHero({
 
     const ctx = gsap.context(() => {
       gsap.set(".text-track", { autoAlpha: 0, y: 60, scale: 0.85, filter: "blur(20px)", rotationX: -20 });
-      gsap.set(".text-days", { autoAlpha: 1, clipPath: "inset(0 100% 0 0)" });
+      gsap.set(".text-days", { autoAlpha: 1, clipPath: "inset(0 0% 0 0)" });
       gsap.set(".main-card", { y: window.innerHeight + 200, autoAlpha: 1 });
       gsap.set([".card-left-text", ".card-right-text", ".mockup-scroll-wrapper", ".floating-badge", ".phone-widget"], { autoAlpha: 0 });
       gsap.set(".cta-wrapper", { autoAlpha: 0, scale: 0.8, filter: "blur(30px)" });

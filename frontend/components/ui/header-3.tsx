@@ -156,7 +156,7 @@ export function Header({ activeTab, onTabChange, onSignInClick, isSignedIn, user
 						</div>
 					) : (
 						<Button variant="outline" size="sm" onClick={onSignInClick} className="text-xs border-slate-750 text-slate-300 cursor-pointer hover:bg-slate-800">
-							Sign In / Clinician Access
+							Sign In
 						</Button>
 					)}
 					<Button size="sm" onClick={() => onTabChange?.('diabetes')} className="text-xs bg-[#10b981] hover:bg-[#34d399] text-black font-semibold cursor-pointer">
@@ -212,7 +212,7 @@ export function Header({ activeTab, onTabChange, onSignInClick, isSignedIn, user
 						</div>
 					) : (
 						<Button variant="outline" className="w-full text-xs text-slate-300 border-slate-800 hover:bg-slate-900 bg-transparent" onClick={onSignInClick}>
-							Sign In / Clinician Access
+							Sign In
 						</Button>
 					)}
 					<Button className="w-full text-xs bg-[#10b981] hover:bg-[#34d399] text-black font-semibold" onClick={() => { onTabChange?.('diabetes'); setOpen(false); }}>

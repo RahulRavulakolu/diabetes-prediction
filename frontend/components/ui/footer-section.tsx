@@ -55,36 +55,36 @@ const footerLinks: FooterSection[] = [
 
 export function Footer() {
 	return (
-		<footer className="md:rounded-t-[3rem] relative w-full border-t border-slate-800 bg-[#0f1116] px-8 py-12 lg:py-16 flex flex-col justify-center">
+		<footer className="md:rounded-t-[2rem] relative w-full border-t border-slate-800 bg-[#0f1116] px-6 py-6 flex flex-col justify-center">
 			<div className="absolute top-0 right-1/2 left-1/2 h-px w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur" />
 
-			<div className="w-full px-4 lg:px-12 grid gap-12 xl:grid-cols-3 xl:gap-20 items-start">
-				<AnimatedContainer className="space-y-6">
-					<div className="flex items-center gap-3">
-						<HeartIcon className="size-8 text-emerald-400 animate-pulse" />
-						<span className="font-serif italic tracking-tight text-emerald-400 text-3xl">HealthGuard AI</span>
+			<div className="w-full px-2 lg:px-8 grid gap-6 xl:grid-cols-3 xl:gap-12 items-start">
+				<AnimatedContainer className="space-y-3">
+					<div className="flex items-center gap-2">
+						<HeartIcon className="size-5 text-emerald-400 animate-pulse" />
+						<span className="font-serif italic tracking-tight text-emerald-400 text-xl">HealthGuard AI</span>
 					</div>
-					<p className="text-slate-400 text-base lg:text-lg leading-relaxed max-w-sm">
-						An advanced machine learning playground designed for physician review, medical model interpretability (SHAP), and continuous data governance monitoring.
+					<p className="text-slate-400 text-xs leading-relaxed max-w-xs">
+						An advanced ML playground for physician review, SHAP interpretability, and continuous data governance monitoring.
 					</p>
-					<p className="text-slate-500 text-sm md:mt-8">
-						© {new Date().getFullYear()} HealthGuard AI. Built with high precision. All rights reserved.
+					<p className="text-slate-500 text-xs">
+						© {new Date().getFullYear()} HealthGuard AI. All rights reserved.
 					</p>
 				</AnimatedContainer>
 
-				<div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-4 xl:col-span-2 xl:gap-x-12 xl:mt-0">
+				<div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4 xl:col-span-2 xl:gap-x-8">
 					{footerLinks.map((section, index) => (
 						<AnimatedContainer key={section.label} delay={0.1 + index * 0.1}>
-							<div className="mb-10 md:mb-0">
-								<h3 className="text-base lg:text-lg font-bold text-slate-200 uppercase tracking-widest">{section.label}</h3>
-								<ul className="text-slate-400 mt-6 space-y-6 text-base lg:text-lg list-none m-0 p-0">
+							<div>
+								<h3 className="text-xs font-bold text-slate-200 uppercase tracking-widest">{section.label}</h3>
+								<ul className="text-slate-400 mt-3 space-y-2 text-xs list-none m-0 p-0">
 									{section.links.map((link) => (
 										<li key={link.title} className="m-0 p-0">
 											<a
 												href={link.href}
 												className="hover:text-emerald-400 inline-flex items-center transition-all duration-300 no-underline hover:translate-x-1"
 											>
-												{link.icon && <link.icon className="me-3 size-5 text-emerald-400/80" />}
+												{link.icon && <link.icon className="me-2 size-3.5 text-emerald-400/80" />}
 												{link.title}
 											</a>
 										</li>

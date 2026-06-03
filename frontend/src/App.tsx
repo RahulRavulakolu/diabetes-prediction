@@ -1089,10 +1089,10 @@ export default function App() {
                       return (
                         <motion.div
                           key={idx}
-                          initial={{ opacity: 0, y: 40 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: false, margin: "-80px" }}
-                          transition={{ duration: 0.6, delay: idx * 0.1 }}
+                          initial={{ opacity: 0, x: isLeft ? -120 : 120 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: false, margin: "-100px" }}
+                          transition={{ duration: 0.7, ease: "easeOut", delay: 0.05 }}
                           className={`flex flex-col md:flex-row items-start md:items-center relative ${
                             isLeft ? "md:flex-row" : "md:flex-row-reverse"
                           }`}

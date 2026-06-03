@@ -817,7 +817,7 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: false, margin: "-80px" }}
+                viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.6 }}
                 className="border-b border-slate-800 pb-6"
               >
@@ -838,7 +838,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: false, margin: "-80px" }}
+                  viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.5, delay: 0.1 }}
                   onClick={() => handleTabChange("diabetes")}
                   className="rounded-3xl p-6 bg-[#14171c] border border-slate-800 shadow-lg hover:border-emerald-500/50 hover:shadow-emerald-500/5 transition-all duration-300 cursor-pointer group"
@@ -858,7 +858,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: false, margin: "-80px" }}
+                  viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                   onClick={() => handleTabChange("heart")}
                   className="rounded-3xl p-6 bg-[#14171c] border border-slate-800 shadow-lg hover:border-emerald-500/50 hover:shadow-emerald-500/5 transition-all duration-300 cursor-pointer group"
@@ -878,7 +878,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: false, margin: "-80px" }}
+                  viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.5, delay: 0.3 }}
                   onClick={() => handleTabChange("symptoms")}
                   className="rounded-3xl p-6 bg-[#14171c] border border-slate-800 shadow-lg hover:border-emerald-500/50 hover:shadow-emerald-500/5 transition-all duration-300 cursor-pointer group"
@@ -901,7 +901,7 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: 45 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: false, margin: "-80px" }}
+                viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.6 }}
                 className="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-[#14171c] p-6 rounded-3xl border border-slate-800"
               >
@@ -954,7 +954,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: false, margin: "-80px" }}
+                  viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.6 }}
                   className="space-y-6 pt-12 border-t border-slate-800"
                 >
@@ -1012,7 +1012,7 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: false, margin: "-80px" }}
+                viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.7 }}
                 className="space-y-6 pt-12 border-t border-slate-800"
               >
@@ -1040,7 +1040,7 @@ export default function App() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: false, margin: "-80px" }}
+                    viewport={{ once: true, margin: "-80px" }}
                     transition={{ duration: 0.6 }}
                     className="relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl group w-full aspect-[4/3] md:aspect-square lg:aspect-[4/3] min-h-[300px]"
                   >
@@ -1059,7 +1059,7 @@ export default function App() {
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: false, margin: "-80px" }}
+                  viewport={{ once: true, margin: "-80px" }}
                   transition={{ duration: 0.6 }}
                   className="text-center"
                 >
@@ -1089,10 +1089,10 @@ export default function App() {
                       return (
                         <motion.div
                           key={idx}
-                          initial={{ opacity: 0, x: isLeft ? -120 : 120 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          viewport={{ once: false, margin: "-100px" }}
-                          transition={{ duration: 0.7, ease: "easeOut", delay: 0.05 }}
+                          initial={{ opacity: 0, y: 40 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, margin: "-80px" }}
+                          transition={{ duration: 0.6, delay: idx * 0.1 }}
                           className={`flex flex-col md:flex-row items-start md:items-center relative ${
                             isLeft ? "md:flex-row" : "md:flex-row-reverse"
                           }`}
@@ -1596,7 +1596,7 @@ export default function App() {
                   <motion.div
                     initial={{ opacity: 0, y: 35 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: false, margin: "-80px" }}
+                    viewport={{ once: true, margin: "-80px" }}
                     transition={{ duration: 0.6 }}
                   >
                     <ThreeDHeartViewer 

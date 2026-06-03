@@ -786,8 +786,8 @@ export default function App() {
           <CinematicHero 
             onCtaClick={() => handleTabChange("diabetes")} 
             brandName="HealthGuard AI"
-            tagline1="Explainable Multi-Disease Prediction"
-            tagline2="and Analytics System."
+            tagline1="Healthcare Intelligence, Reimagined"
+            tagline2="Predict disease risk, understand contributing factors, and make informed health decisions through explainable AI."
             cardHeading="Predictive Accuracy & Clinical Interpretability."
           />
         </div>

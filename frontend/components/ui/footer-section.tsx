@@ -77,9 +77,9 @@ export function Footer() {
 						<AnimatedContainer key={section.label} delay={0.1 + index * 0.1}>
 							<div>
 								<h3 className="text-xs font-bold text-slate-200 uppercase tracking-widest">{section.label}</h3>
-								<ul className="text-slate-400 mt-3 space-y-5 text-xs list-none m-0 p-0">
+								<ul className="text-slate-400 mt-3 flex flex-col gap-y-4 text-xs list-none m-0 p-0">
 									{section.links.map((link) => (
-										<li key={link.title} className="m-0 p-0">
+										<li key={link.title}>
 											<a
 												href={link.href}
 												className="hover:text-emerald-400 inline-flex items-center transition-all duration-300 no-underline hover:translate-x-1"
